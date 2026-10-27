@@ -1,0 +1,1920 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cristal harmonique · GFF intrinsèque</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#05070b; --panel:#0d1117; --fg:#e6edf3; --muted:#8b949e;
+    --acc:#7ee787; --acc2:#79c0ff; --vio:#d2a8ff; --crit:#ff7b72;
+    --serif:'Cormorant Garamond',Georgia,serif;
+    --mono:'JetBrains Mono',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--fg);
+    font:14px/1.55 system-ui,sans-serif}
+  #app{display:flex;height:100vh}
+  #panel{width:460px;flex-shrink:0;padding:14px;background:var(--panel);
+    overflow-y:auto;border-right:1px solid #21262d;transition:margin-left .35s ease}
+  body.record #panel{margin-left:-460px}
+  #panel h1{font-family:var(--serif);font-size:21px;font-weight:600;
+    color:var(--acc);margin-bottom:4px}
+  #panel h2{font-family:var(--serif);font-size:12.5px;font-weight:600;
+    color:var(--acc2);text-transform:uppercase;letter-spacing:.14em;
+    margin:16px 0 6px;padding-bottom:4px;border-bottom:1px solid #21262d}
+  #panel label{display:block;font-family:var(--mono);font-size:11px;
+    color:var(--muted);margin:8px 0 3px}
+  #panel input[type=range]{width:100%;accent-color:var(--acc2);height:20px;cursor:pointer}
+  #panel .val{color:var(--acc2);font-family:var(--mono);font-variant-numeric:tabular-nums}
+  #panel select,#panel button{width:100%;margin-top:5px;padding:7px;
+    background:#161b22;color:var(--fg);border:1px solid #30363d;
+    border-radius:6px;font-family:var(--mono);font-size:12px;cursor:pointer;transition:.15s}
+  #panel select:hover,#panel button:hover{background:#21262d;border-color:var(--acc2)}
+  #panel button#animA{margin-top:6px;background:#1a2a1f;border-color:var(--acc);
+    color:var(--acc);font-weight:600}
+  #panel button#animA.active{background:var(--acc);color:#05070b}
+  #panel .eq{background:#05070b;border:1px solid #21262d;border-radius:6px;
+    padding:8px 10px;margin:5px 0;font-family:var(--mono);font-size:10.5px;
+    color:#c9d1d9;line-height:1.65;overflow-x:auto}
+  #panel .eq b{color:var(--acc2);font-family:var(--serif);font-size:12px}
+  #panel .sub{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-bottom:6px}
+  .tabs{display:flex;gap:4px;margin:8px 0}
+  .tab{flex:1;padding:7px;background:#161b22;border:1px solid #30363d;
+    border-radius:6px;font-family:var(--mono);font-size:11px;cursor:pointer;
+    text-align:center;color:var(--muted);transition:.15s}
+  .tab:hover{background:#21262d}
+  .tab.active{background:var(--acc2);color:#05070b;border-color:var(--acc2);font-weight:600}
+  .tabpane{display:none}
+  .tabpane.active{display:block}
+  #view{flex:1;position:relative;background:radial-gradient(ellipse at 30% 20%, #1a2233 0%, #0a0e14 40%, #05070b 100%);overflow:hidden;min-width:0}
+  #view canvas{display:block;width:100%;height:100%}
+
+  #hud{position:absolute;top:12px;left:12px;font-family:var(--mono);font-size:11px;
+    color:var(--muted);background:rgba(5,7,11,.82);padding:8px 12px;border-radius:6px;
+    pointer-events:none;white-space:pre;border:1px solid #21262d;z-index:2}
+  body.video #hud, body.record #hud{display:none}
+
+  #legend{position:absolute;bottom:12px;right:12px;font-family:var(--mono);
+    font-size:11px;color:var(--muted);background:rgba(5,7,11,.82);padding:8px 12px;
+    border-radius:6px;border:1px solid #21262d;z-index:2}
+  body.video #legend, body.record #legend{display:none}
+  .sw{display:inline-block;width:10px;height:10px;margin-right:6px;
+    vertical-align:middle;border-radius:2px}
+
+  #animBanner{position:absolute;top:12px;left:50%;transform:translateX(-50%);
+    font-family:var(--serif);font-size:15px;color:var(--acc);
+    background:rgba(5,7,11,.82);padding:6px 16px;border-radius:6px;
+    border:1px solid var(--acc);pointer-events:none;display:none;z-index:2;
+    letter-spacing:.05em}
+  #animBanner.active{display:block}
+  body.video #animBanner, body.record #animBanner{display:none}
+
+  #keysHint{position:absolute;bottom:12px;left:12px;font-family:var(--mono);
+    font-size:10.5px;color:var(--muted);background:rgba(5,7,11,.82);
+    padding:6px 10px;border-radius:6px;border:1px solid #21262d;z-index:2;
+    line-height:1.6}
+  body.video #keysHint, body.record #keysHint{display:none}
+
+  #cinemaOverlay{position:absolute;inset:0;pointer-events:none;z-index:3;
+    display:none;flex-direction:column;justify-content:space-between;
+    padding:24px 0 28px 0}
+  body.video #cinemaOverlay{display:flex}
+  #cinemaOverlay .top{text-align:center}
+  #cinemaOverlay .title{font-family:var(--serif);font-size:56px;font-weight:300;
+    color:#e6edf3;letter-spacing:.04em;line-height:1.05;
+    text-shadow:0 2px 28px rgba(0,0,0,.95)}
+  #cinemaOverlay .subtitle{font-family:var(--mono);font-size:13px;
+    letter-spacing:.3em;color:var(--acc2);margin-top:12px;text-transform:uppercase}
+  #cinemaOverlay .eq{margin:24px auto 0;display:inline-block;
+    background:rgba(5,7,11,.78);border:1px solid #30363d;
+    padding:10px 28px;border-radius:6px;
+    font-family:var(--mono);font-size:14px;color:#c9d1d9}
+  #cinemaOverlay .bottom{text-align:center;font-family:var(--serif);color:#e6edf3}
+  #cinemaOverlay .bottom .lbl{font-family:var(--mono);font-size:13px;
+    color:var(--acc2);letter-spacing:.2em;margin-top:10px}
+  #cinemaOverlay .bottom .val{font-size:26px;font-weight:300;margin-top:2px}
+  #cinemaOverlay .bottom .val.small{font-size:20px}
+
+  #cinemaTimer{position:absolute;top:28px;right:28px;font-family:var(--mono);
+    font-size:14px;color:var(--muted);background:rgba(5,7,11,.7);padding:6px 12px;
+    border-radius:6px;border:1px solid #21262d;z-index:4;display:none}
+  body.video #cinemaTimer{display:block}
+
+  #videoBtn, #recordBtn{position:absolute;top:12px;right:12px;padding:7px 14px;
+    background:rgba(5,7,11,.85);color:var(--fg);border:1px solid #30363d;
+    border-radius:6px;font-family:var(--mono);font-size:12px;cursor:pointer;
+    transition:.15s;z-index:10}
+  #videoBtn:hover, #recordBtn:hover{background:#161b22;border-color:var(--acc2)}
+  body.video #videoBtn, body.record #videoBtn,
+  body.record #recordBtn{top:auto;bottom:28px;right:28px;opacity:.85}
+  body.video #videoBtn:hover, body.record #videoBtn:hover{opacity:1}
+  body.video #recordBtn{display:none}
+  #recordBtn{right:130px}
+
+  #recBar{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);
+    display:flex;gap:8px;align-items:center;z-index:10;
+    background:rgba(5,7,11,.85);padding:8px 12px;border-radius:8px;
+    border:1px solid #21262d;font-family:var(--mono);font-size:11px;color:var(--muted)}
+  body.record #recBar{display:flex}
+  body:not(.record) #recBar{display:none}
+  #recBar select,#recBar button{padding:5px 8px;background:#161b22;color:var(--fg);
+    border:1px solid #30363d;border-radius:4px;font-family:var(--mono);font-size:11px;cursor:pointer}
+  #recBar button#recBtn{background:rgba(200,30,30,.85);color:#fff;border-color:#ff5555;font-weight:600}
+  #recBar button#recBtn.recording{background:#ff3333;animation:pulse 1s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+  #recInfo{position:absolute;bottom:80px;left:50%;transform:translateX(-50%);
+    font-family:var(--mono);font-size:11px;color:var(--crit);
+    background:rgba(5,7,11,.85);padding:4px 10px;border-radius:4px;
+    display:none;z-index:10}
+  body.record #recInfo{display:block}
+
+  .subtabs{display:flex;gap:4px;margin:6px 0 8px}
+  .subtab{flex:1;padding:6px;background:#0f141a;border:1px solid #21262d;
+    border-radius:5px;font-family:var(--mono);font-size:10.5px;cursor:pointer;
+    text-align:center;color:var(--muted);transition:.15s}
+  .subtab:hover{background:#161b22}
+  .subtab.active{background:var(--vio);color:#05070b;border-color:var(--vio);font-weight:600}
+  .subpane{display:none}
+  .subpane.active{display:block}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="panel">
+    <h1>Cristal harmonique · GFF</h1>
+    <div class="sub">GFF intrinsèque · laplacien de graphe · SOR</div>
+
+    <div class="tabs">
+      <div class="tab active" data-tab="A">A · Formes</div>
+      <div class="tab" data-tab="C">C · Surfaces</div>
+    </div>
+
+    <div class="tabpane active" id="paneA">
+      <div class="subtabs">
+        <div class="subtab active" data-sub="hay">Haüy</div>
+        <div class="subtab" data-sub="sys">Systèmes</div>
+      </div>
+
+      <div class="subpane active" id="subHay">
+        <h2>Polyèdre de Haüy</h2>
+        <label>Forme</label>
+        <select id="polyA">
+          <option value="cube">Cube (6 faces)</option>
+          <option value="octa">Octaèdre (8 faces)</option>
+          <option value="trapezo24" selected>Trapézoèdre 24 faces</option>
+          <option value="icosa">Icosaèdre (20 faces)</option>
+          <option value="dodeca">Dodécaèdre (12 pentagones)</option>
+          <option value="rhombododeca">Rhombododécaèdre (12 losanges)</option>
+        </select>
+      </div>
+
+      <div class="subpane" id="subSys">
+        <h2>Système cristallin</h2>
+        <label>Réseau de Bravais</label>
+        <select id="sysA">
+          <option value="triclinic">Triclinique (1, 1̄)</option>
+          <option value="monoclinic">Monoclinique (2, m)</option>
+          <option value="orthorhombic">Orthorhombique (222, mm2)</option>
+          <option value="tetragonal">Quadratique (4, 4̄, 422)</option>
+          <option value="trigonal">Trigonal (3, 3̄, 32)</option>
+          <option value="hexagonal">Hexagonal (6, 6̄, 622)</option>
+          <option value="cubic" selected>Cubique (23, 432, 4̄3m)</option>
+        </select>
+        <label>Forme cristallographique {hkl}</label>
+        <select id="formA"></select>
+      </div>
+
+      <button id="animA">▶ Animer les formes</button>
+      <label>Durée de maintien (s) : <span class="val" id="vHold"></span></label>
+      <input type="range" id="hold" min="0.5" max="8" step="0.5" value="3">
+      <label>Durée du morphing (s) : <span class="val" id="vMorph"></span></label>
+      <input type="range" id="morph" min="0.2" max="4" step="0.1" value="1">
+      <label>Subdivisions par arête : <span class="val" id="vResA"></span></label>
+      <input type="range" id="resA" min="2" max="8" step="1" value="4">
+      <label>Amplitude du GFF : <span class="val" id="vAmpA"></span></label>
+      <input type="range" id="ampA" min="0" max="1" step="0.02" value="0.25">
+      <button id="resampleA">⟳ Nouveau GFF</button>
+      <div class="eq" id="eqA"><b>Équations :</b><br>—</div>
+    </div>
+
+    <div class="tabpane" id="paneC">
+      <h2>Surface spéciale</h2>
+      <label>Surface</label>
+      <select id="surfC">
+        <option value="sphere" selected>Sphère de Gauss (surface)</option>
+        <option value="torus">Tore</option>
+        <option value="mobius">Möbius</option>
+        <option value="catenoid">Catenoïde</option>
+        <option value="helicoid">Hélicoïde</option>
+      </select>
+      <label>Résolution (2^N) : <span class="val" id="vResC"></span></label>
+      <input type="range" id="resC" min="4" max="7" step="1" value="6">
+      <label>Amplitude : <span class="val" id="vAmpC"></span></label>
+      <input type="range" id="ampC" min="0" max="1" step="0.02" value="0.25">
+      <button id="resampleC">⟳ Nouveau GFF</button>
+    </div>
+
+    <h2>Rendu</h2>
+    <label>Matériau</label>
+    <select id="material">
+      <option value="diamond" selected>Diamant (transmission)</option>
+      <option value="glass">Verre</option>
+      <option value="crystal">Cristal bleuté</option>
+      <option value="metal">Métal</option>
+      <option value="matte">Mat coloré</option>
+      <option value="gem">Gemme taillée</option>
+      <option value="quartz">Quartz</option>
+      <option value="pyrite">Pyrite (métallique doré)</option>
+      <option value="halite">Halite (sel gemme)</option>
+      <option value="amethyst">Améthyste</option>
+    </select>
+    <label>Palette du GFF</label>
+    <select id="palette">
+      <option value="gff" selected>GFF (bleu↔rouge)</option>
+      <option value="heat">Chaleur</option>
+      <option value="viridis">Viridis</option>
+      <option value="cool">Cool/warm</option>
+      <option value="mono">Monochrome</option>
+      <option value="spectral">Spectral</option>
+      <option value="ice">Glace</option>
+      <option value="magma">Magma</option>
+    </select>
+    <label>Environnement</label>
+    <select id="env">
+      <option value="studio" selected>Studio</option>
+      <option value="sunset">Coucher de soleil</option>
+      <option value="night">Nuit</option>
+      <option value="dark">Sombre</option>
+      <option value="laboratory">Laboratoire</option>
+      <option value="cave">Grotte</option>
+    </select>
+    <label>Intensité lumineuse : <span class="val" id="vExposure"></span></label>
+    <input type="range" id="exposure" min="0.2" max="2.5" step="0.05" value="1.2">
+    <label>Rugosité : <span class="val" id="vRough"></span></label>
+    <input type="range" id="rough" min="0" max="1" step="0.01" value="0.05">
+    <label>Métallicité : <span class="val" id="vMetal"></span></label>
+    <input type="range" id="metal" min="0" max="1" step="0.01" value="0">
+    <label>Indice de réfraction : <span class="val" id="vIor"></span></label>
+    <input type="range" id="ior" min="1" max="3" step="0.05" value="2.4">
+    <label>Transmission : <span class="val" id="vTrans"></span></label>
+    <input type="range" id="trans" min="0" max="1" step="0.01" value="1">
+    <label>Épaisseur : <span class="val" id="vThick"></span></label>
+    <input type="range" id="thick" min="0.1" max="5" step="0.1" value="2.5">
+
+    <h2>Caméra</h2>
+    <label>Zoom : <span class="val" id="vZ"></span></label>
+    <input type="range" id="Z" min="0" max="20" step="1" value="6">
+    <label>Vitesse de rotation : <span class="val" id="vRot"></span></label>
+    <input type="range" id="rotSpeed" min="0" max="3" step="0.1" value="0.4">
+    <button id="rot">⏸ Pause rotation</button>
+    <button id="resetCam">↺ Réinitialiser caméra</button>
+
+    <h2>Équations</h2>
+    <div class="eq"><b>GFF sur graphe :</b><br>(−Δ<sub>G</sub>)Φ = ξ,  Φ|<sub>∂D</sub> = 0<br>Δ<sub>G</sub> = D − A (laplacien de graphe)</div>
+    <div class="eq"><b>SOR :</b><br>Φ<sub>i</sub><sup>(n+1)</sup> = (1−ω)Φ<sub>i</sub><sup>(n)</sup> + (ω/d<sub>i</sub>) Σ<sub>j~i</sub> Φ<sub>j</sub><sup>(n)</sup><br>ω ≈ 1.9</div>
+
+    <h2>Légende</h2>
+    <div><span class="sw" style="background:#79c0ff"></span>Φ &lt; 0 (creux)</div>
+    <div><span class="sw" style="background:#7ee787"></span>Φ ≈ 0</div>
+    <div><span class="sw" style="background:#ff7b72"></span>Φ &gt; 0 (bosses)</div>
+  </div>
+  <div id="view">
+    <div id="hud"></div>
+    <div id="animBanner">Morphing · <span id="animName">trapézoèdre</span></div>
+
+    <div id="legend">glisser : orbite · molette : zoom</div>
+    <div id="keysHint">← → : changer de forme · ↑ ↓ : changer d'onglet · Espace : pause rotation</div>
+
+    <div id="cinemaOverlay">
+      <div class="top">
+        <div class="title" id="cTitleMain">Haüy</div>
+        <div class="subtitle" id="cTitleSub">GFF · intrinsèque</div>
+        <div class="eq" id="cEq">L Φ = ξ,  Φ|∂D = 0</div>
+      </div>
+      <div class="bottom">
+        <div class="lbl">FORME</div>
+        <div class="val" id="cFig">trapézoèdre</div>
+        <div class="lbl">SYSTÈME</div>
+        <div class="val small" id="cTransform">—</div>
+      </div>
+    </div>
+    <div id="cinemaTimer">00:00</div>
+
+    <button id="videoBtn">▶ Mode cinéma</button>
+    <button id="recordBtn">● Mode enregistrement</button>
+
+    <div id="recBar">
+      <label style="margin:0">Résolution</label>
+      <select id="recRes">
+        <option value="720">720p</option>
+        <option value="1080" selected>1080p</option>
+        <option value="1440">1440p</option>
+        <option value="2160">4K</option>
+      </select>
+      <label style="margin:0">fps</label>
+      <select id="recFps">
+        <option value="24">24</option>
+        <option value="30" selected>30</option>
+        <option value="60">60</option>
+      </select>
+      <button id="recBtn">● Enregistrer</button>
+      <button id="quitRecord" style="background:#21262d">✕ Quitter</button>
+    </div>
+    <div id="recInfo"></div>
+  </div>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+               "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/" } }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+// ============================================================
+// ÉTAT
+// ============================================================
+const state = {
+  tab: 'A', sub: 'hay',
+  material: 'diamond', palette: 'gff', env: 'studio',
+  zoomStep: 6, autoRot: true, baseDist: 10,
+  mode: 'client',
+  // subdiv : 2..8 (par défaut 4 → ~1000 sommets, ~15 ms)
+  A: { poly: 'trapezo24', sys: 'cubic', form: 'cube', subdiv: 4, amp: 0.25, _gff: null, _cacheKey: null },
+  C: { surf: 'sphere', resExp: 6, amp: 0.25, _gff: null },
+  anim: {
+    holdMs: 3000, morphMs: 1000,
+    active: false, list: [], idx: 0, fromIdx: 0, toIdx: 0,
+    phase: 'hold', phaseStart: 0, morphT: 0, rafId: null, lastPoly: null,
+    frozenGFF: null, // GFF gelé pendant le morphing
+  },
+  rotSpeed: 0.4,
+  render: { exposure: 1.2, rough: 0.05, metal: 0, ior: 2.4, trans: 1.0, thick: 2.5 },
+};
+let mesh = null;
+
+// ============================================================
+// FFT 2D radix-2 (tab C uniquement)
+// ============================================================
+function fft1d(re, im) {
+  const n = re.length;
+  if (n <= 1) return;
+  for (let i = 1, j = 0; i < n; i++) {
+    let bit = n >> 1;
+    for (; j & bit; bit >>= 1) j ^= bit;
+    j ^= bit;
+    if (i < j) { const tr=re[i];re[i]=re[j];re[j]=tr;
+                 const ti=im[i];im[i]=im[j];im[j]=ti; }
+  }
+  for (let len = 2; len <= n; len <<= 1) {
+    const ang = -2*Math.PI/len, wr = Math.cos(ang), wi = Math.sin(ang);
+    for (let i = 0; i < n; i += len) {
+      let cr = 1, ci = 0;
+      for (let k = 0; k < len/2; k++) {
+        const ur = re[i+k], ui = im[i+k];
+        const vr = re[i+k+len/2]*cr - im[i+k+len/2]*ci;
+        const vi = re[i+k+len/2]*ci + im[i+k+len/2]*cr;
+        re[i+k]=ur+vr; im[i+k]=ui+vi;
+        re[i+k+len/2]=ur-vr; im[i+k+len/2]=ui-vi;
+        const ncr=cr*wr-ci*wi; ci=cr*wi+ci*wr; cr=ncr;
+      }
+    }
+  }
+}
+function fft2d(re, im, n) {
+  if ((n & (n-1)) !== 0) throw new Error('FFT: n doit être une puissance de 2');
+  const r = new Float64Array(n), i = new Float64Array(n);
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x < n; x++) { r[x]=re[y*n+x]; i[x]=im[y*n+x]; }
+    fft1d(r, i);
+    for (let x = 0; x < n; x++) { re[y*n+x]=r[x]; im[y*n+x]=i[x]; }
+  }
+  for (let x = 0; x < n; x++) {
+    for (let y = 0; y < n; y++) { r[y]=re[y*n+x]; i[y]=im[y*n+x]; }
+    fft1d(r, i);
+    for (let y = 0; y < n; y++) { re[y*n+x]=r[y]; im[y*n+x]=i[y]; }
+  }
+}
+function ifft2d(re, im, n) {
+  for (let k = 0; k < n*n; k++) im[k] = -im[k];
+  fft2d(re, im, n);
+  const inv = 1/(n*n);
+  for (let k = 0; k < n*n; k++) { re[k] *= inv; im[k] *= -inv; }
+}
+let gCache = null;
+function gauss() {
+  if (gCache !== null) { const v = gCache; gCache = null; return v; }
+  let u = 0, v = 0;
+  while (u === 0) u = Math.random();
+  while (v === 0) v = Math.random();
+  const r = Math.sqrt(-2*Math.log(u));
+  gCache = r*Math.sin(2*Math.PI*v);
+  return r*Math.cos(2*Math.PI*v);
+}
+
+// ============================================================
+// POLYÈDRES DE HAÜY
+// ============================================================
+function makeCube(S) {
+  const s = S/2;
+  const V = [
+    [-s,-s,-s],[s,-s,-s],[s,s,-s],[-s,s,-s],
+    [-s,-s, s],[s,-s, s],[s,s, s],[-s,s, s]
+  ].map(a => new THREE.Vector3(...a));
+  const F = [[0,1,2,3],[4,5,6,7],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7]];
+  return { V, F, nFaces: 6 };
+}
+function makeOcta(S) {
+  const r = S/Math.sqrt(2);
+  const V = [
+    [r,0,0],[-r,0,0],[0,r,0],[0,-r,0],[0,0,r],[0,0,-r]
+  ].map(a => new THREE.Vector3(...a));
+  const F = [
+    [0,2,4],[2,1,4],[1,3,4],[3,0,4],
+    [2,0,5],[1,2,5],[3,1,5],[0,3,5]
+  ];
+  return { V, F, nFaces: 8 };
+}
+function makeIcosa(S) {
+  const t = (1 + Math.sqrt(5))/2;
+  const s = S/Math.sqrt(1 + t*t);
+  const V = [
+    [-1,t,0],[1,t,0],[-1,-t,0],[1,-t,0],
+    [0,-1,t],[0,1,t],[0,-1,-t],[0,1,-t],
+    [t,0,-1],[t,0,1],[-t,0,-1],[-t,0,1]
+  ].map(a => new THREE.Vector3(...a).multiplyScalar(s));
+  const F = [
+    [0,11,5],[0,5,1],[0,1,7],[0,7,10],[0,10,11],
+    [1,5,9],[5,11,4],[11,10,2],[10,7,6],[7,1,8],
+    [3,9,4],[3,4,2],[3,2,6],[3,6,8],[3,8,9],
+    [4,9,5],[2,4,11],[6,2,10],[8,6,7],[9,8,1]
+  ];
+  return { V, F, nFaces: 20 };
+}
+function makeDodeca(S) {
+  const t = (1 + Math.sqrt(5))/2;
+  const s = S/Math.sqrt(3);
+  const V = [
+    [-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],
+    [-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1],
+    [0,-1/t,-t],[0,-1/t,t],[0,1/t,-t],[0,1/t,t],
+    [-1/t,-t,0],[-1/t,t,0],[1/t,-t,0],[1/t,t,0],
+    [-t,0,-1/t],[t,0,-1/t],[-t,0,1/t],[t,0,1/t]
+  ].map(a => new THREE.Vector3(...a).multiplyScalar(s));
+  const F = [
+    [3,11,7,15,13],[7,19,18,6,11],[17,1,8,10,6],[8,0,16,2,10],
+    [6,10,2,12,17],[11,6,17,12,3],[3,12,2,16,13],[13,16,0,4,15],
+    [15,4,5,19,7],[19,5,14,9,18],[18,14,9,0,8],[5,4,0,9,14]
+  ];
+  return { V, F, nFaces: 12 };
+}
+function makeRhombododeca(S) {
+  const s = S/Math.sqrt(2);
+  const V = [
+    [1,1,0],[-1,1,0],[1,-1,0],[-1,-1,0],
+    [1,0,1],[-1,0,1],[1,0,-1],[-1,0,-1],
+    [0,1,1],[0,-1,1],[0,1,-1],[0,-1,-1]
+  ].map(a => new THREE.Vector3(...a).multiplyScalar(s));
+  const F = [
+    [0,8,4,1],[0,1,9,2],[2,9,6,3],[3,6,11,2],
+    [0,7,10,1],[1,10,11,0],[0,2,5,7],[3,11,10,7],
+    [4,8,9,5],[5,9,6,4],[8,0,1,10],[6,9,2,11]
+  ];
+  return { V, F, nFaces: 12 };
+}
+function makeTrapezo24(S) {
+  const r = S / Math.sqrt(2);
+  const r2 = r * 0.55;
+  const V = [];
+  const poles = [
+    [r,0,0],[-r,0,0],[0,r,0],[0,-r,0],[0,0,r],[0,0,-r]
+  ];
+  for (const p of poles) V.push(new THREE.Vector3(...p));
+  const cubocta = [
+    [r2,r2,0],[-r2,r2,0],[r2,-r2,0],[-r2,-r2,0],
+    [r2,0,r2],[-r2,0,r2],[r2,0,-r2],[-r2,0,-r2],
+    [0,r2,r2],[0,-r2,r2],[0,r2,-r2],[0,-r2,-r2]
+  ];
+  for (const p of cubocta) V.push(new THREE.Vector3(...p));
+  for (const p of poles) V.push(new THREE.Vector3(p[0]*0.5, p[1]*0.5, p[2]*0.5));
+  const F = [];
+  const cuboIndices = [6,7,8,9,10,11,12,13,14,15,16,17];
+  for (const ci of cuboIndices) {
+    const c = V[ci];
+    const dists = [];
+    for (let j = 0; j < V.length; j++) {
+      if (j === ci) continue;
+      dists.push([j, c.distanceTo(V[j])]);
+    }
+    dists.sort((a,b) => a[1]-b[1]);
+    const nbrs = dists.slice(0, 4).map(p => p[0]);
+    const e1 = V[nbrs[0]].clone().sub(c).normalize();
+    const nrm = c.clone().normalize();
+    const e2 = new THREE.Vector3().crossVectors(nrm, e1).normalize();
+    nbrs.sort((a,b) => {
+      const va = V[a].clone().sub(c);
+      const vb = V[b].clone().sub(c);
+      return Math.atan2(va.dot(e2), va.dot(e1)) - Math.atan2(vb.dot(e2), vb.dot(e1));
+    });
+    F.push(nbrs);
+  }
+  return { V, F, nFaces: 24 };
+}
+
+const HAUY = {
+  cube: makeCube, octa: makeOcta, trapezo24: makeTrapezo24,
+  icosa: makeIcosa, dodeca: makeDodeca, rhombododeca: makeRhombododeca,
+};
+
+// ============================================================
+// SYSTÈMES CRISTALLINS
+// ============================================================
+const SQRT3 = Math.sqrt(3);
+const LATTICES = {
+  triclinic:    { a:1.00, b:1.15, c:1.30, alpha:80,  beta:95,  gamma:105 },
+  monoclinic:   { a:1.00, b:1.20, c:1.40, alpha:90,  beta:105, gamma:90  },
+  orthorhombic: { a:1.00, b:1.30, c:1.60, alpha:90,  beta:90,  gamma:90  },
+  tetragonal:   { a:1.00, b:1.00, c:1.50, alpha:90,  beta:90,  gamma:90  },
+  trigonal:     { a:1.00, b:1.00, c:1.20, alpha:75,  beta:75,  gamma:75  },
+  hexagonal:    { a:1.00, b:1.00, c:1.50, alpha:90,  beta:90,  gamma:120 },
+  cubic:        { a:1.00, b:1.00, c:1.00, alpha:90,  beta:90,  gamma:90  },
+};
+
+function normaleHex(h, k, l, cOverA) {
+  const ca = cOverA || 1;
+  return [h, (h + 2*k) / SQRT3, l / ca];
+}
+function rot6Hex(h, k, i, l) {
+  return [
+    [h,k,i,l],[k,i,h,l],[i,h,k,l],
+    [-h,-k,-i,l],[-k,-i,-h,l],[-i,-h,-k,l]
+  ];
+}
+function rot6HexSigned(h, k, i, l) {
+  const r = rot6Hex(h,k,i,l);
+  return r.concat(r.map(([a,b,c,d]) => [-a,-b,-c,-d]));
+}
+function rot3Hex(h, k, i, l) {
+  return [[h,k,i,l],[k,i,h,l],[i,h,k,l]];
+}
+function permsCubic(vals) {
+  const out = new Set();
+  const permute = (a, l) => {
+    if (l === a.length) {
+      for (const s0 of [1,-1]) for (const s1 of [1,-1]) for (const s2 of [1,-1]) {
+        out.add([a[0]*s0, a[1]*s1, a[2]*s2].join(","));
+      }
+      return;
+    }
+    for (let i = l; i < a.length; i++) {
+      [a[l], a[i]] = [a[i], a[l]];
+      permute(a, l+1);
+      [a[l], a[i]] = [a[i], a[l]];
+    }
+  };
+  permute([...vals], 0);
+  return [...out].map(s => s.split(",").map(Number));
+}
+
+const FORMS = {
+  triclinic: [
+    { id:'tri_pinacoid', name:'Pinacoïde {100}', desc:'2 faces parallèles', normales: () => [[1,0,0],[-1,0,0]] },
+    { id:'tri_pinacoid2', name:'Pinacoïde {010}', desc:'2 faces parallèles', normales: () => [[0,1,0],[0,-1,0]] },
+    { id:'tri_pinacoid3', name:'Pinacoïde {001}', desc:'2 faces parallèles', normales: () => [[0,0,1],[0,0,-1]] },
+    { id:'tri_pedion', name:'Pédion {111}', desc:'1 face', normales: () => [[1,1,1]] },
+  ],
+  monoclinic: [
+    { id:'mono_pinacoid', name:'Pinacoïde {010}', desc:'2 faces parallèles', normales: () => [[0,1,0],[0,-1,0]] },
+    { id:'mono_prism', name:'Prisme {110}', desc:'4 faces prismatiques', normales: () => [[1,1,0],[-1,1,0],[1,-1,0],[-1,-1,0]] },
+    { id:'mono_dome', name:'Dôme {h0l}', desc:'2 faces non parallèles', normales: () => [[1,0,1],[-1,0,1]] },
+    { id:'mono_sphenoid', name:'Sphénoïde {111}', desc:'2 faces', normales: () => [[1,1,1],[-1,-1,-1]] },
+  ],
+  orthorhombic: [
+    { id:'ortho_pinacoid', name:'Pinacoïde {100}', desc:'2 faces parallèles', normales: () => [[1,0,0],[-1,0,0]] },
+    { id:'ortho_prism', name:'Prisme {110}', desc:'4 faces prismatiques', normales: () => [[1,1,0],[-1,1,0],[1,-1,0],[-1,-1,0]] },
+    { id:'ortho_dipyr', name:'Dipyramide {111}', desc:'8 faces triangulaires', normales: () => [
+      [1,1,1],[1,1,-1],[1,-1,1],[1,-1,-1],[-1,1,1],[-1,1,-1],[-1,-1,1],[-1,-1,-1]
+    ] },
+    { id:'ortho_prism2', name:'Prisme {h0l}', desc:'4 faces prismatiques', normales: () => [[1,0,1],[-1,0,1],[1,0,-1],[-1,0,-1]] },
+  ],
+  tetragonal: [
+    { id:'tet_prism2', name:'Prisme 2e ordre {100}', desc:'4 faces prismatiques', normales: () => [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0]] },
+    { id:'tet_prism1', name:'Prisme 1er ordre {110}', desc:'4 faces prismatiques', normales: () => [[1,1,0],[-1,1,0],[1,-1,0],[-1,-1,0]] },
+    { id:'tet_dipyr1', name:'Dipyramide 1er ordre {111}', desc:'8 faces triangulaires', normales: () => [
+      [1,1,1],[1,1,-1],[1,-1,1],[1,-1,-1],[-1,1,1],[-1,1,-1],[-1,-1,1],[-1,-1,-1]
+    ] },
+    { id:'tet_dipyr2', name:'Dipyramide 2e ordre {101}', desc:'8 faces triangulaires', normales: () => [
+      [1,0,1],[-1,0,1],[0,1,1],[0,-1,1],[1,0,-1],[-1,0,-1],[0,1,-1],[0,-1,-1]
+    ] },
+    { id:'tet_diteta', name:'Ditetragonal dipyramide {211}', desc:'16 faces triangulaires', normales: () => {
+      const out = [];
+      for (const sx of [1,-1]) for (const sy of [1,-1]) {
+        out.push([2*sx, 1*sy, 1]);
+        out.push([2*sx, 1*sy, -1]);
+        out.push([1*sx, 2*sy, 1]);
+        out.push([1*sx, 2*sy, -1]);
+      }
+      return out;
+    } },
+    { id:'tet_pinacoid', name:'Pinacoïde basal {001}', desc:'2 faces parallèles', normales: () => [[0,0,1],[0,0,-1]] },
+  ],
+  trigonal: [
+    { id:'trig_rhombo', name:'Rhomboèdre {10-11}', desc:'6 faces rhombiques', normales: (L) => {
+      const c = L.c / L.a;
+      return [
+        normaleHex( 1, 0, -1, 1, c), normaleHex( 0, 1, -1, 1, c),
+        normaleHex(-1, 1,  0, 1, c), normaleHex(-1, 0,  1,-1, c),
+        normaleHex( 0,-1,  1,-1, c), normaleHex( 1,-1,  0,-1, c)
+      ];
+    } },
+    { id:'trig_prism', name:'Prisme trigonal {10-10}', desc:'6 faces prismatiques', normales: (L) => {
+      const c = L.c / L.a;
+      return rot6Hex(1,0,-1,0).map(([h,k,i,l]) => normaleHex(h,k,l,c));
+    } },
+    { id:'trig_dipyr', name:'Dipyramide trigonale {11-21}', desc:'6 faces triangulaires', normales: (L) => {
+      const c = L.c / L.a;
+      const r = rot3Hex(1,1,-2,1);
+      return r.concat(r.map(([h,k,i,l]) => [-h,-k,-i,-l])).map(([h,k,i,l]) => normaleHex(h,k,l,c));
+    } },
+    { id:'trig_scaleno', name:'Scalénoèdre {21-31}', desc:'12 faces scalènes', normales: (L) => {
+      const c = L.c / L.a;
+      const a = rot6Hex(2,1,-3,1).map(([h,k,i,l]) => normaleHex(h,k,l,c));
+      const b = rot6Hex(1,2,-3,-1).map(([h,k,i,l]) => normaleHex(h,k,l,c));
+      return a.concat(b);
+    } },
+  ],
+  hexagonal: [
+    { id:'hex_prism1', name:'Prisme 1er ordre {10-10}', desc:'6 faces prismatiques', normales: (L) => {
+      const c = L.c / L.a;
+      return rot6Hex(1,0,-1,0).map(([h,k,i,l]) => normaleHex(h,k,l,c));
+    } },
+    { id:'hex_prism2', name:'Prisme 2e ordre {11-20}', desc:'6 faces prismatiques', normales: (L) => {
+      const c = L.c / L.a;
+      return rot6Hex(1,1,-2,0).map(([h,k,i,l]) => normaleHex(h,k,l,c));
+    } },
+    { id:'hex_dipyr1', name:'Dipyramide 1er ordre {10-11}', desc:'12 faces triangulaires', normales: (L) => {
+      const c = L.c / L.a;
+      return rot6HexSigned(1,0,-1,1).map(([h,k,i,l]) => normaleHex(h,k,l,c));
+    } },
+    { id:'hex_dipyr2', name:'Dipyramide 2e ordre {11-21}', desc:'12 faces triangulaires', normales: (L) => {
+      const c = L.c / L.a;
+      return rot6HexSigned(1,1,-2,1).map(([h,k,i,l]) => normaleHex(h,k,l,c));
+    } },
+    { id:'hex_dihex', name:'Dihexagonal dipyramide {21-31}', desc:'24 faces triangulaires', normales: (L) => {
+      const c = L.c / L.a;
+      return rot6HexSigned(2,1,-3,1).map(([h,k,i,l]) => normaleHex(h,k,l,c));
+    } },
+    { id:'hex_pinacoid', name:'Pinacoïde basal {0001}', desc:'2 faces parallèles', normales: () => [[0,0,1],[0,0,-1]] },
+  ],
+  cubic: [
+    { id:'cube', name:'Cube {100}', desc:'6 faces carrées', normales: () => permsCubic([1,0,0]) },
+    { id:'octa', name:'Octaèdre {111}', desc:'8 faces triangulaires', normales: () => permsCubic([1,1,1]) },
+    { id:'dodeca', name:'Dodécaèdre {110}', desc:'12 faces rhombiques', normales: () => permsCubic([1,1,0]) },
+    { id:'tetra', name:'Tétraèdre {111}', desc:'4 faces triangulaires', normales: () => [[1,1,1],[-1,-1,1],[-1,1,-1],[1,-1,-1]] },
+    { id:'pyrito', name:'Pyritoèdre {210}', desc:'12 faces pentagonales', normales: () => {
+      const s = new Set();
+      for (const p of permsCubic([2,1,0])) s.add(p.join(","));
+      for (const p of permsCubic([2,0,1])) s.add(p.join(","));
+      for (const p of permsCubic([0,2,1])) s.add(p.join(","));
+      return [...s].map(v => v.split(",").map(Number));
+    } },
+    { id:'trapezo24', name:'Trapézoèdre {211}', desc:'24 faces trapézoïdales', normales: () => permsCubic([2,1,1]) },
+    { id:'trisocta', name:'Trisoctaèdre {221}', desc:'24 faces triangulaires', normales: () => permsCubic([2,2,1]) },
+    { id:'hexocta', name:'Hexoctaèdre {321}', desc:'48 faces triangulaires', normales: () => permsCubic([3,2,1]) },
+  ],
+};
+
+// ============================================================
+// CONSTRUCTION POLYÈDRE {hkl}
+// ============================================================
+function normaliser(v) {
+  const n = Math.hypot(...v) || 1;
+  return v.map(x => x / n);
+}
+function cross(a, b) {
+  return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
+}
+function dot(a, b) { return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; }
+function sub(a, b) { return [a[0]-b[0], a[1]-b[1], a[2]-b[2]]; }
+
+function intersection3(n1, n2, n3) {
+  const A = [n1, n2, n3];
+  const det =
+    A[0][0]*(A[1][1]*A[2][2]-A[1][2]*A[2][1]) -
+    A[0][1]*(A[1][0]*A[2][2]-A[1][2]*A[2][0]) +
+    A[0][2]*(A[1][0]*A[2][1]-A[1][1]*A[2][0]);
+  if (Math.abs(det) < 1e-9) return null;
+  const inv = [[0,0,0],[0,0,0],[0,0,0]];
+  inv[0][0] = (A[1][1]*A[2][2]-A[1][2]*A[2][1])/det;
+  inv[0][1] = (A[0][2]*A[2][1]-A[0][1]*A[2][2])/det;
+  inv[0][2] = (A[0][1]*A[1][2]-A[0][2]*A[1][1])/det;
+  inv[1][0] = (A[1][2]*A[2][0]-A[1][0]*A[2][2])/det;
+  inv[1][1] = (A[0][0]*A[2][2]-A[0][2]*A[2][0])/det;
+  inv[1][2] = (A[0][2]*A[1][0]-A[0][0]*A[1][2])/det;
+  inv[2][0] = (A[1][0]*A[2][1]-A[1][1]*A[2][0])/det;
+  inv[2][1] = (A[0][1]*A[2][0]-A[0][0]*A[2][1])/det;
+  inv[2][2] = (A[0][0]*A[1][1]-A[0][1]*A[1][0])/det;
+  return [
+    inv[0][0]+inv[0][1]+inv[0][2],
+    inv[1][0]+inv[1][1]+inv[1][2],
+    inv[2][0]+inv[2][1]+inv[2][2]
+  ];
+}
+
+function construirePolyedre(normalesBrutes) {
+  const normales = normalesBrutes.map(normaliser);
+  const sommets = [];
+  const cle = p => p.map(x => x.toFixed(5)).join("|");
+
+  for (let i = 0; i < normales.length; i++) {
+    for (let j = i+1; j < normales.length; j++) {
+      for (let k = j+1; k < normales.length; k++) {
+        const p = intersection3(normales[i], normales[j], normales[k]);
+        if (!p) continue;
+        const ok = normales.every(n => dot(n, p) <= 1 + 1e-7);
+        if (!ok) continue;
+        const c = cle(p);
+        if (!sommets.some(s => s.cle === c)) sommets.push({ p, cle: c });
+      }
+    }
+  }
+
+  const faces = normales.map((n, index) => {
+    const pts = sommets.filter(s => Math.abs(dot(n, s.p) - 1) < 1e-5).map(s => s.p);
+    if (pts.length < 3) return null;
+    const centre = [
+      pts.reduce((s,p)=>s+p[0],0)/pts.length,
+      pts.reduce((s,p)=>s+p[1],0)/pts.length,
+      pts.reduce((s,p)=>s+p[2],0)/pts.length
+    ];
+    const u = normaliser(sub(pts[0], centre));
+    const v = normaliser(cross(n, u));
+    const tries = [...pts].sort((a,b) => {
+      const aa = Math.atan2(dot(sub(a,centre),v), dot(sub(a,centre),u));
+      const bb = Math.atan2(dot(sub(b,centre),v), dot(sub(b,centre),u));
+      return aa - bb;
+    });
+    return { normale: n, index, sommets: tries };
+  }).filter(Boolean);
+
+  return { sommets: sommets.map(s => s.p), faces };
+}
+
+function makeFormPoly(sys, formId, S) {
+  const forms = FORMS[sys] || FORMS.cubic;
+  const form = forms.find(f => f.id === formId) || forms[0];
+  const L = LATTICES[sys] || LATTICES.cubic;
+  const normalesBrutes = form.normales(L);
+
+  const prismes = ['mono_prism','ortho_prism','ortho_prism2',
+                   'tet_prism1','tet_prism2','trig_prism','hex_prism1','hex_prism2'];
+  const normales = prismes.includes(form.id)
+    ? normalesBrutes.concat([[0,0,1],[0,0,-1]])
+    : normalesBrutes;
+
+  const geo = construirePolyedre(normales);
+  if (!geo.faces.length || geo.sommets.length < 4) return makeCube(S);
+
+  const V = geo.sommets.map(p => new THREE.Vector3(p[0]*S, p[1]*S, p[2]*S));
+  const cle = p => p.map(x => x.toFixed(5)).join("|");
+  const idx = new Map();
+  geo.sommets.forEach((p,i) => idx.set(cle(p), i));
+
+  const F = [];
+  for (const f of geo.faces) {
+    const ii = f.sommets.map(p => idx.get(cle(p)));
+    if (ii.length < 3) continue;
+    for (let i = 1; i < ii.length-1; i++) F.push([ii[0], ii[i], ii[i+1]]);
+  }
+  if (F.length < 4) return makeCube(S);
+  return { V, F, nFaces: geo.faces.length };
+}
+
+// ============================================================
+// INTERPOLATION MORPHING
+// ============================================================
+function lerpPoly(A, B, t, S) {
+  const VA = A.V.map(v => v.clone().multiplyScalar(1/S));
+  const VB = B.V.map(v => v.clone().multiplyScalar(1/S));
+  const rA = VA.reduce((s,v)=>s+v.length(),0)/VA.length;
+  const rB = VB.reduce((s,v)=>s+v.length(),0)/VB.length;
+  const rAvg = (rA+rB)/2;
+  for (const v of VA) v.multiplyScalar(rAvg/rA);
+  for (const v of VB) v.multiplyScalar(rAvg/rB);
+  const nMax = Math.max(VA.length, VB.length);
+  const V = [];
+  for (let i = 0; i < nMax; i++) {
+    const a = VA[i % VA.length], b = VB[i % VB.length];
+    V.push(a.clone().lerp(b, t));
+  }
+  return { V, F: t < 0.5 ? A.F : B.F };
+}
+
+// ============================================================
+// COLORATION
+// ============================================================
+const _c = new THREE.Color();
+function colorFor(v) {
+  const t = Math.max(-1, Math.min(1, v));
+  switch (state.palette) {
+    case 'gff':
+      if (t < 0) return _c.setRGB(0.2+0.3*(1+t), 0.5+0.3*(1+t), 1.0);
+      else       return _c.setRGB(1.0, 0.5-0.2*t, 0.2+0.1*(1-t));
+    case 'heat': return _c.setHSL((1-t)/3, 0.9, 0.5);
+    case 'viridis': return _c.setHSL(0.55-0.45*(t+1)/2, 0.75, 0.55);
+    case 'cool': return _c.setRGB(0.5-0.4*t, 0.7-0.2*Math.abs(t), 0.5+0.4*t);
+    case 'mono': { const g = 0.5+0.5*t; return _c.setRGB(g,g,g); }
+    case 'spectral': return _c.setHSL((t+1)*0.35, 0.8, 0.5);
+    case 'ice': return _c.setRGB(0.6-0.4*t, 0.8-0.2*t, 1.0);
+    case 'magma': return _c.setHSL(0.05+0.15*t, 0.9, 0.3+0.3*t);
+  }
+  return _c.setRGB(0.5,0.5,0.5);
+}
+
+// ============================================================
+// SUBDIVISION — hash entier pour éviter O(n²)
+// ============================================================
+function hashVec(v) {
+  const x = Math.round(v.x * 10000) | 0;
+  const y = Math.round(v.y * 10000) | 0;
+  const z = Math.round(v.z * 10000) | 0;
+  return ((x * 73856093) ^ (y * 19349663) ^ (z * 83492791)) | 0;
+}
+
+function subdivideMesh(poly, subdiv) {
+  const V = poly.V, F = poly.F;
+  const verts = [];
+  const hashMap = new Map();
+
+  function addVert(v) {
+    const h = hashVec(v);
+    if (hashMap.has(h)) {
+      const list = hashMap.get(h);
+      for (const i of list) {
+        const w = verts[i];
+        if (Math.abs(w.x-v.x) < 1e-4 && Math.abs(w.y-v.y) < 1e-4 && Math.abs(w.z-v.z) < 1e-4) return i;
+      }
+      const idx = verts.length;
+      verts.push(v.clone());
+      list.push(idx);
+      return idx;
+    }
+    const idx = verts.length;
+    verts.push(v.clone());
+    hashMap.set(h, [idx]);
+    return idx;
+  }
+
+  const tris = [];
+  for (const face of F) {
+    if (!face || face.length < 3) continue;
+    const fv = face.map(i => V[i]);
+    const fan = [];
+    for (let i = 1; i < fv.length-1; i++) fan.push([fv[0], fv[i], fv[i+1]]);
+
+    for (const [A,B,C] of fan) {
+      const grid = [];
+      for (let j = 0; j <= subdiv; j++) {
+        grid.push([]);
+        for (let i = 0; i <= subdiv-j; i++) {
+          const u = i/subdiv, v = j/subdiv, w = 1-u-v;
+          const P = new THREE.Vector3()
+            .addScaledVector(A, w).addScaledVector(B, u).addScaledVector(C, v);
+          grid[j].push(addVert(P));
+        }
+      }
+      // 2 triangles par losange
+      for (let j = 0; j < subdiv; j++) {
+        for (let i = 0; i < subdiv-j; i++) {
+          const a = grid[j][i];
+          const b = grid[j][i+1];
+          const c = grid[j+1][i];
+          if (a !== b && b !== c && a !== c) tris.push([a,b,c]);
+          if (i+1 <= subdiv-(j+1)) {
+            const d = grid[j][i+1];
+            const e = grid[j+1][i+1];
+            const f = grid[j+1][i];
+            if (d !== e && e !== f && d !== f) tris.push([d,e,f]);
+          }
+        }
+      }
+    }
+  }
+  return { V: verts, F: tris };
+}
+
+// ============================================================
+// LAPLACIEN DE GRAPHE + SOR
+// ============================================================
+function buildGraphLaplacian(V, F) {
+  const n = V.length;
+  const adj = Array.from({ length: n }, () => new Set());
+  for (const tri of F) {
+    const [a,b,c] = tri;
+    adj[a].add(b); adj[a].add(c);
+    adj[b].add(a); adj[b].add(c);
+    adj[c].add(a); adj[c].add(b);
+  }
+  const neighbors = adj.map(s => [...s]);
+  const degree = neighbors.map(a => a.length);
+  return { neighbors, degree };
+}
+
+function computeBoundary(V, F) {
+  const edgeCount = new Map();
+  const key = (a,b) => a < b ? a*100000 + b : b*100000 + a;
+  for (const tri of F) {
+    const [a,b,c] = tri;
+    for (const [u,v] of [[a,b],[b,c],[c,a]]) {
+      const k = key(u,v);
+      edgeCount.set(k, (edgeCount.get(k)||0) + 1);
+    }
+  }
+  const boundary = new Uint8Array(V.length);
+  for (const [k, count] of edgeCount) {
+    if (count === 1) {
+      boundary[Math.floor(k / 100000)] = 1;
+      boundary[k % 100000] = 1;
+    }
+  }
+  return boundary;
+}
+
+// SOR : 60 itérations suffisent pour n < 1500. ω=1.9.
+function sampleGFFGraph(V, F) {
+  const { neighbors, degree } = buildGraphLaplacian(V, F);
+  const boundary = computeBoundary(V, F);
+  const n = V.length;
+  const xi = new Float64Array(n);
+  for (let i = 0; i < n; i++) xi[i] = gauss();
+  const phi = new Float64Array(n);
+  const omega = 1.9;
+  const ITER = 60;
+  for (let it = 0; it < ITER; it++) {
+    for (let i = 0; i < n; i++) {
+      if (boundary[i]) { phi[i] = 0; continue; }
+      const d = degree[i];
+      if (d === 0) continue;
+      let sum = 0;
+      for (const j of neighbors[i]) sum += phi[j];
+      const target = (sum + xi[i]) / d;
+      phi[i] = (1-omega)*phi[i] + omega*target;
+    }
+  }
+  let sum = 0, sum2 = 0, count = 0;
+  for (let i = 0; i < n; i++) {
+    if (boundary[i]) continue;
+    const v = phi[i];
+    sum += v; sum2 += v*v; count++;
+  }
+  const mean = count > 0 ? sum/count : 0;
+  const variance = count > 0 ? sum2/count - mean*mean : 1;
+  const sd = Math.sqrt(Math.max(variance, 1e-12));
+  const out = new Float64Array(n);
+  for (let i = 0; i < n; i++) {
+    out[i] = boundary[i] ? 0 : (phi[i]-mean)/sd;
+  }
+  return { phi: out, boundary, n };
+}
+
+// ============================================================
+// MAILLAGE GFF INTRINSÈQUE
+// ============================================================
+function buildIntrinsicMesh(V, F, gff, amp, S) {
+  const positions = [], colors = [], indices = [];
+  const maxDisp = Math.min(amp * S * 0.5, 0.45 * S);
+  const n = V.length;
+  const normals = Array.from({ length: n }, () => new THREE.Vector3());
+  for (const tri of F) {
+    const [a,b,c] = tri;
+    const A = V[a], B = V[b], C = V[c];
+    const nrm = new THREE.Vector3().crossVectors(
+      B.clone().sub(A), C.clone().sub(A)
+    ).normalize();
+    normals[a].add(nrm); normals[b].add(nrm); normals[c].add(nrm);
+  }
+  for (let i = 0; i < n; i++) {
+    if (normals[i].lengthSq() > 1e-9) normals[i].normalize();
+    else normals[i].set(0,1,0);
+  }
+  for (let i = 0; i < n; i++) {
+    const g = gff.phi[i] || 0;
+    const P = V[i].clone().addScaledVector(normals[i], g * maxDisp);
+    positions.push(P.x, P.y, P.z);
+    const c = colorFor(g);
+    colors.push(c.r, c.g, c.b);
+  }
+  for (const [a,b,c] of F) indices.push(a,b,c);
+  return { positions, colors, indices };
+}
+
+// ============================================================
+// SURFACES (tab C)
+// ============================================================
+const TAU = Math.PI*2;
+const surfFns = {
+  sphere(u,v,S){ const lon=u*TAU, lat=(v-.5)*Math.PI;
+    return new THREE.Vector3(S*Math.cos(lat)*Math.cos(lon), S*Math.sin(lat), S*Math.cos(lat)*Math.sin(lon)); },
+  torus(u,v,S){ const th=u*TAU, ph=v*TAU, R=S*.7, r=S*.3;
+    return new THREE.Vector3((R+r*Math.cos(ph))*Math.cos(th), r*Math.sin(ph), (R+r*Math.cos(ph))*Math.sin(th)); },
+  mobius(u,v,S){ const t=u*TAU, s=(v-.5)*S*.5;
+    return new THREE.Vector3((S*.55+s*Math.cos(t/2))*Math.cos(t), s*Math.sin(t/2), (S*.55+s*Math.cos(t/2))*Math.sin(t)); },
+  catenoid(u,v,S){ const a=S*.3, th=u*TAU, h=(v-.5)*S*1.1, r=a*Math.cosh(h/a);
+    return new THREE.Vector3(r*Math.cos(th), h, r*Math.sin(th)); },
+  helicoid(u,v,S){ const th=u*TAU*1.4, h=(v-.5)*S*1.2, r=S*.5;
+    return new THREE.Vector3(r*Math.cos(th), h+th*.25, r*Math.sin(th)); },
+};
+const _e = 0.003;
+function surfNormal(fn, u, v, S) {
+  const Pu = fn(Math.min(1,u+_e), v, S).sub(fn(Math.max(0,u-_e), v, S));
+  const Pv = fn(u, Math.min(1,v+_e), S).sub(fn(u, Math.max(0,v-_e), S));
+  const nrm = new THREE.Vector3().crossVectors(Pu, Pv);
+  if (!Number.isFinite(nrm.x) || nrm.lengthSq() < 1e-12) return new THREE.Vector3(0,1,0);
+  return nrm.normalize();
+}
+
+function sampleGFF2D(n) {
+  const re = new Float64Array(n*n);
+  const im = new Float64Array(n*n);
+  for (let k = 0; k < n*n; k++) re[k] = gauss();
+  fft2d(re, im, n);
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x < n; x++) {
+      const sx = Math.sin(Math.PI*x/n);
+      const sy = Math.sin(Math.PI*y/n);
+      const s = 4*sx*sx + 4*sy*sy;
+      const f = s > 1e-12 ? 1/Math.sqrt(s) : 0;
+      re[y*n+x] *= f;
+      im[y*n+x] *= f;
+    }
+  }
+  ifft2d(re, im, n);
+  let sum = 0, sum2 = 0;
+  for (let k = 0; k < n*n; k++) { sum += re[k]; sum2 += re[k]*re[k]; }
+  const mean = sum/(n*n);
+  const variance = sum2/(n*n) - mean*mean;
+  const sd = Math.sqrt(Math.max(variance, 1e-12));
+  const out = new Float64Array(n*n);
+  for (let k = 0; k < n*n; k++) out[k] = (re[k]-mean)/sd;
+  return { data: out, n };
+}
+
+function buildSurfMesh(fn, N, amp, gff, S) {
+  const positions = [], colors = [], indices = [];
+  const gffN = gff.n, gffData = gff.data;
+  const maxDisp = Math.min(amp * S * 0.5, 0.45 * S);
+  for (let j = 0; j <= N; j++) {
+    for (let i = 0; i <= N; i++) {
+      const u = i/N, v = j/N;
+      const P = fn(u, v, S);
+      const Nrm = surfNormal(fn, u, v, S);
+      const gi = Math.min(gffN-1, Math.floor(u*(gffN-1)));
+      const gj = Math.min(gffN-1, Math.floor(v*(gffN-1)));
+      const gg = gffData[gj*gffN+gi] || 0;
+      const finalP = P.clone().addScaledVector(Nrm, gg*maxDisp);
+      positions.push(
+        Number.isFinite(finalP.x)?finalP.x:0,
+        Number.isFinite(finalP.y)?finalP.y:0,
+        Number.isFinite(finalP.z)?finalP.z:0
+      );
+      const c = colorFor(gg);
+      colors.push(c.r, c.g, c.b);
+    }
+  }
+  for (let j = 0; j < N; j++) {
+    for (let i = 0; i < N; i++) {
+      const a = j*(N+1)+i, b = a+1, c = a+(N+1), d = c+1;
+      indices.push(a,b,d, a,d,c);
+    }
+  }
+  return { positions, colors, indices };
+}
+
+// ============================================================
+// Three.js
+// ============================================================
+const view = document.getElementById('view');
+const scene = new THREE.Scene();
+scene.background = null;
+
+const camera = new THREE.PerspectiveCamera(42, 1, 0.05, 2000);
+camera.position.set(8, 6, 10);
+
+const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true, preserveDrawingBuffer:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = state.render.exposure;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+view.appendChild(renderer.domElement);
+renderer.domElement.style.outline = 'none';
+renderer.domElement.style.touchAction = 'none';
+
+let captureRenderer = null;
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.autoRotate = state.autoRot;
+controls.autoRotateSpeed = state.rotSpeed;
+controls.minDistance = 1.5;
+controls.maxDistance = 80;
+controls.target.set(0,0,0);
+controls.enableZoom = false;
+
+function applyZoomStep() {
+  const stepFactor = Math.pow(1.18, state.zoomStep - 6);
+  const d = state.baseDist / stepFactor;
+  const dir = camera.position.clone().sub(controls.target).normalize();
+  const nd = THREE.MathUtils.clamp(d, controls.minDistance, controls.maxDistance);
+  camera.position.copy(controls.target).addScaledVector(dir, nd);
+  controls.update();
+}
+function onWheel(e) {
+  e.preventDefault(); e.stopPropagation();
+  const dir = -Math.sign(e.deltaY);
+  state.zoomStep = THREE.MathUtils.clamp(state.zoomStep + dir, 0, 20);
+  document.getElementById('Z').value = state.zoomStep;
+  document.getElementById('vZ').textContent = state.zoomStep;
+  applyZoomStep();
+}
+renderer.domElement.addEventListener('wheel', onWheel, { passive:false });
+view.addEventListener('wheel', onWheel, { passive:false, capture:true });
+
+const pmrem = new THREE.PMREMGenerator(renderer);
+let envMap = null;
+function updateEnv() {
+  if (envMap) envMap.dispose();
+  if (state.env === 'studio') {
+    envMap = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  } else {
+    const c = new THREE.Color();
+    if (state.env === 'sunset') c.setHSL(0.08, 0.8, 0.5);
+    else if (state.env === 'night') c.setHSL(0.6, 0.5, 0.1);
+    else if (state.env === 'laboratory') c.setHSL(0.55, 0.15, 0.8);
+    else if (state.env === 'cave') c.setHSL(0.08, 0.4, 0.15);
+    else c.setHSL(0.7, 0.1, 0.05);
+    const g = new THREE.Scene();
+    g.background = c;
+    envMap = pmrem.fromScene(g, 0.04).texture;
+  }
+  scene.environment = envMap;
+}
+updateEnv();
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.3));
+const key = new THREE.DirectionalLight(0xffffff, 1.5);
+key.position.set(6, 10, 8); scene.add(key);
+const rim = new THREE.DirectionalLight(0x79c0ff, 1.2);
+rim.position.set(-8, 4, -6); scene.add(rim);
+const fill = new THREE.PointLight(0xffd9a0, 40, 40, 2);
+fill.position.set(0, 3, 0); scene.add(fill);
+
+// ============================================================
+// Matériau
+// ============================================================
+function makeMaterial() {
+  const R = state.render;
+  const base = { metalness: R.metal, roughness: R.rough, envMapIntensity: 1.5, side: THREE.DoubleSide };
+  switch (state.material) {
+    case 'diamond':
+      return new THREE.MeshPhysicalMaterial({ ...base, color: 0xffffff, metalness: 0, roughness: Math.min(0.1, R.rough),
+        transmission: R.trans, thickness: R.thick, ior: R.ior, clearcoat: 1.0, clearcoatRoughness: 0.02,
+        transparent: true, attenuationColor: new THREE.Color(0xa8d8ff), attenuationDistance: 3.0 });
+    case 'glass':
+      return new THREE.MeshPhysicalMaterial({ ...base, color: 0xffffff, roughness: 0.1,
+        transmission: R.trans*0.95, thickness: R.thick, ior: R.ior, clearcoat: 0.8, transparent: true });
+    case 'crystal':
+      return new THREE.MeshPhysicalMaterial({ ...base, color: 0x88bbff, metalness: 0.1, roughness: 0.15,
+        transmission: R.trans*0.85, thickness: R.thick, ior: R.ior, clearcoat: 0.6, transparent: true });
+    case 'metal':
+      return new THREE.MeshStandardMaterial({ ...base, color: 0xc0c8d0, metalness: 1.0, roughness: R.rough });
+    case 'matte':
+      return new THREE.MeshStandardMaterial({ ...base, vertexColors: true, roughness: 0.6, metalness: 0.1 });
+    case 'gem':
+      return new THREE.MeshPhysicalMaterial({ ...base, color: 0xff66cc, metalness: 0.2, roughness: 0.0,
+        transmission: R.trans*0.9, thickness: R.thick, ior: R.ior, clearcoat: 1.0, clearcoatRoughness: 0.0, transparent: true });
+    case 'quartz':
+      return new THREE.MeshPhysicalMaterial({ ...base, color: 0xddeeff, metalness: 0.0, roughness: 0.05,
+        transmission: R.trans*0.9, thickness: R.thick, ior: 1.55, clearcoat: 0.5, transparent: true });
+    case 'pyrite':
+      return new THREE.MeshStandardMaterial({ ...base, color: 0xd4af37, metalness: 0.9, roughness: 0.25, envMapIntensity: 2.0 });
+    case 'halite':
+      return new THREE.MeshPhysicalMaterial({ ...base, color: 0xffffff, metalness: 0.0, roughness: 0.1,
+        transmission: R.trans*0.95, thickness: R.thick, ior: 1.54, clearcoat: 0.3, transparent: true });
+    case 'amethyst':
+      return new THREE.MeshPhysicalMaterial({ ...base, color: 0x9966ff, metalness: 0.1, roughness: 0.05,
+        transmission: R.trans*0.85, thickness: R.thick, ior: 1.54, clearcoat: 0.7, transparent: true });
+    default:
+      return new THREE.MeshStandardMaterial({ ...base, vertexColors: true, roughness: 0.6, metalness: 0.1 });
+  }
+}
+
+// ============================================================
+// Construction scène
+// ============================================================
+function clearMesh() {
+  if (mesh) {
+    scene.remove(mesh);
+    mesh.geometry.dispose();
+    mesh.material.dispose();
+    mesh = null;
+  }
+}
+function buildFromData(pos, col, idx, keepCamera = false) {
+  clearMesh();
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos), 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(col), 3));
+  geo.setIndex(idx);
+  geo.computeVertexNormals();
+  geo.computeBoundingBox();
+  geo.attributes.color.colorSpace = THREE.SRGBColorSpace;
+
+  const mat = makeMaterial();
+  mat.vertexColors = (state.material === 'matte');
+  mesh = new THREE.Mesh(geo, mat);
+  scene.add(mesh);
+
+  if (!keepCamera) {
+    const box = geo.boundingBox;
+    if (box && !box.isEmpty()) {
+      const c = box.getCenter(new THREE.Vector3());
+      const sz = box.getSize(new THREE.Vector3()).length();
+      if (Number.isFinite(sz) && sz > 1e-6) {
+        controls.target.copy(c);
+        state.baseDist = Math.max(2.5, sz*1.5);
+        controls.minDistance = sz*0.4;
+        controls.maxDistance = sz*5;
+        const dir = camera.position.clone().sub(c);
+        if (dir.lengthSq() < 1e-6) dir.set(1,0.8,1);
+        dir.normalize();
+        state.zoomStep = 6;
+        document.getElementById('Z').value = 6;
+        document.getElementById('vZ').textContent = 6;
+        applyZoomStep();
+      }
+    }
+  }
+}
+
+// ============================================================
+// CACHE GFF tab C
+// ============================================================
+function getGFFForC() {
+  const N = 2**state.C.resExp;
+  if (!state.C._gff || state.C._gff.n !== N) {
+    state.C._gff = sampleGFF2D(N);
+  }
+  return state.C._gff;
+}
+
+// ============================================================
+// MORPHING — GFF gelé, pas de recalcul pendant le morphing
+// ============================================================
+const animBanner = document.getElementById('animBanner');
+const animName = document.getElementById('animName');
+
+function easeInOut(t) { return t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2; }
+
+function currentList() {
+  if (state.sub === 'hay') return Object.keys(HAUY);
+  return (FORMS[state.A.sys] || FORMS.cubic).map(f => f.id);
+}
+function currentKey() {
+  return state.sub === 'hay' ? state.A.poly : state.A.form;
+}
+function makeCurrentPoly(id, S) {
+  if (state.sub === 'hay') {
+    const fn = HAUY[id] || HAUY.cube;
+    return fn(S);
+  }
+  return makeFormPoly(state.A.sys, id, S);
+}
+
+function animateLoop(now) {
+  if (!state.anim.active) return;
+  const A = state.anim;
+  const elapsed = now - A.phaseStart;
+  const S = 2.2;
+
+  if (A.phase === 'hold') {
+    if (elapsed >= A.holdMs) {
+      A.phase = 'morph';
+      A.phaseStart = now;
+      A.fromIdx = A.idx;
+      A.toIdx = (A.idx + 1) % A.list.length;
+      A.lastPoly = makeCurrentPoly(A.list[A.fromIdx], S);
+      // GEL du GFF : on subdivise la forme de départ et on échantillonne le GFF UNE FOIS
+      const subStart = subdivideMesh(A.lastPoly, state.A.subdiv);
+      A.frozenGFF = { mesh: subStart, gff: sampleGFFGraph(subStart.V, subStart.F) };
+      animName.textContent = `${A.list[A.fromIdx]} → ${A.list[A.toIdx]}`;
+      updateCinemaText();
+    }
+  } else if (A.phase === 'morph') {
+    const t = Math.min(1, elapsed / A.morphMs);
+    A.morphT = easeInOut(t);
+    const B = makeCurrentPoly(A.list[A.toIdx], S);
+    const interp = lerpPoly(A.lastPoly, B, A.morphT, S);
+    // Subdivision de la géométrie interpolée (rapide, pas de GFF recalculé)
+    const sub = subdivideMesh(interp, state.A.subdiv);
+    // Le GFF est celui gelé au début du morphing : on utilise ses valeurs
+    // (même longueur que sub.V car même topologie)
+    const gff = A.frozenGFF ? A.frozenGFF.gff : sampleGFFGraph(sub.V, sub.F);
+    // Si la longueur diffère (topologie changée), on tombe en repli sur un GFF neuf
+    let gffUse = gff;
+    if (gff.phi.length !== sub.V.length) {
+      gffUse = sampleGFFGraph(sub.V, sub.F);
+    }
+    const data = buildIntrinsicMesh(sub.V, sub.F, gffUse, state.A.amp, S);
+    buildFromData(data.positions, data.colors, data.indices, true);
+    animName.textContent = `${A.list[A.fromIdx]} → ${A.list[A.toIdx]} (${(A.morphT*100).toFixed(0)}%)`;
+    updateCinemaText();
+    if (t >= 1) {
+      A.idx = A.toIdx;
+      A.phase = 'hold';
+      A.phaseStart = now;
+      A.frozenGFF = null;
+      animName.textContent = A.list[A.idx];
+      if (state.sub === 'hay') {
+        state.A.poly = A.list[A.idx];
+        document.getElementById('polyA').value = state.A.poly;
+      } else {
+        state.A.form = A.list[A.idx];
+        document.getElementById('formA').value = state.A.form;
+      }
+      updateCinemaText();
+    }
+  }
+  A.rafId = requestAnimationFrame(animateLoop);
+}
+
+function startAnimation() {
+  const A = state.anim;
+  if (A.active) return;
+  A.active = true;
+  A.list = currentList();
+  const key = currentKey();
+  const idx = A.list.indexOf(key);
+  A.idx = idx >= 0 ? idx : 0;
+  A.phase = 'hold';
+  A.phaseStart = performance.now();
+  A.morphT = 0;
+  A.frozenGFF = null;
+  animBanner.classList.add('active');
+  animName.textContent = A.list[A.idx];
+  document.getElementById('animA').classList.add('active');
+  document.getElementById('animA').textContent = '■ Arrêter l\'animation';
+  document.getElementById('animA').style.background = 'var(--acc)';
+  document.getElementById('animA').style.color = '#05070b';
+  updateCinemaText();
+  A.rafId = requestAnimationFrame(animateLoop);
+}
+
+function stopAnimation() {
+  const A = state.anim;
+  if (!A.active) return;
+  A.active = false;
+  if (A.rafId) { cancelAnimationFrame(A.rafId); A.rafId = null; }
+  A.frozenGFF = null;
+  animBanner.classList.remove('active');
+  document.getElementById('animA').classList.remove('active');
+  document.getElementById('animA').textContent = '▶ Animer les formes';
+  document.getElementById('animA').style.background = '';
+  document.getElementById('animA').style.color = '';
+  rebuildA();
+}
+
+function updateFormSelect() {
+  const sel = document.getElementById('formA');
+  const forms = FORMS[state.A.sys] || FORMS.cubic;
+  sel.innerHTML = '';
+  for (const f of forms) {
+    const o = document.createElement('option');
+    o.value = f.id; o.textContent = f.name;
+    sel.appendChild(o);
+  }
+  if (forms.find(f => f.id === state.A.form)) sel.value = state.A.form;
+  else { state.A.form = forms[0].id; sel.value = state.A.form; }
+}
+
+// ============================================================
+// REBUILD A
+// ============================================================
+function rebuildA() {
+  if (state.anim.active) return;
+  const S = 2.2;
+  const sub = state.A.subdiv;
+
+  let poly, label, subTxt, nF;
+  if (state.sub === 'hay') {
+    const fn = HAUY[state.A.poly] || HAUY.cube;
+    poly = fn(S);
+    const names = { cube:'Cube', octa:'Octaèdre', trapezo24:'Trapézoèdre 24',
+      icosa:'Icosaèdre', dodeca:'Dodécaèdre', rhombododeca:'Rhombododécaèdre' };
+    label = `Haüy · ${names[state.A.poly] || state.A.poly}`;
+    subTxt = 'polyèdre classique · GFF intrinsèque';
+    nF = poly.nFaces || poly.F.length;
+  } else {
+    const form = FORMS[state.A.sys].find(f => f.id === state.A.form) || FORMS[state.A.sys][0];
+    poly = makeFormPoly(state.A.sys, state.A.form, S);
+    label = `${state.A.sys} · ${form.name}`;
+    subTxt = form.desc + ' · GFF intrinsèque';
+    nF = poly.nFaces || poly.F.length;
+  }
+
+  const t0 = performance.now();
+  const subMesh = subdivideMesh(poly, sub);
+  const gff = sampleGFFGraph(subMesh.V, subMesh.F);
+  const dt = performance.now() - t0;
+  state.A._gff = gff;
+  const data = buildIntrinsicMesh(subMesh.V, subMesh.F, gff, state.A.amp, S);
+  buildFromData(data.positions, data.colors, data.indices);
+
+  updateEqA();
+  const warn = dt > 200 ? ' ⚠ lent' : '';
+  document.getElementById('hud').textContent =
+    `${label} · ${nF} faces · subdiv=${sub}${warn}\n${subTxt}\n${subMesh.V.length} sommets · ${subMesh.F.length} triangles · ${dt.toFixed(0)} ms`;
+  updateCinemaText();
+}
+
+function rebuildC() {
+  const N = 2**state.C.resExp;
+  const gff = getGFFForC();
+  const fn = surfFns[state.C.surf];
+  const data = buildSurfMesh(fn, N, state.C.amp, gff, 2.5);
+  buildFromData(data.positions, data.colors, data.indices);
+  document.getElementById('hud').textContent =
+    `Surface · ${state.C.surf} · N=${N}\namp=${state.C.amp.toFixed(2)}`;
+  updateCinemaText();
+}
+
+// ============================================================
+// ÉQUATIONS
+// ============================================================
+const eqsSys = {
+  triclinic: `<b>Triclinique :</b><br>a ≠ b ≠ c ; α ≠ β ≠ γ ≠ 90°<br>Groupe : 1, 1̄`,
+  monoclinic: `<b>Monoclinique :</b><br>a ≠ b ≠ c ; α = γ = 90°, β > 90°<br>Groupe : 2, m, 2/m`,
+  orthorhombic: `<b>Orthorhombique :</b><br>a ≠ b ≠ c ; α = β = γ = 90°<br>Groupe : 222, mm2, mmm`,
+  tetragonal: `<b>Quadratique :</b><br>a = b ≠ c ; α = β = γ = 90°<br>Groupe : 4, 4̄, 4/m, 422`,
+  trigonal: `<b>Trigonal :</b><br>a = b = c ; α = β = γ ≠ 90°<br>Groupe : 3, 3̄, 32, 3m`,
+  hexagonal: `<b>Hexagonal :</b><br>a = b ≠ c ; α = β = 90°, γ = 120°<br>Groupe : 6, 6̄, 6/m, 622`,
+  cubic: `<b>Cubique :</b><br>a = b = c ; α = β = γ = 90°<br>Groupe : 23, 432, 4̄3m`,
+};
+function updateEqA() {
+  const el = document.getElementById('eqA');
+  if (!el) return;
+  if (state.sub === 'hay') {
+    el.innerHTML = `<b>GFF sur graphe :</b><br>L Φ = ξ,  Φ|<sub>∂D</sub> = 0<br>L = D − A (laplacien de graphe)<br>SOR ω=1.9, 60 itérations`;
+    return;
+  }
+  const form = FORMS[state.A.sys].find(f => f.id === state.A.form) || FORMS[state.A.sys][0];
+  el.innerHTML = `${eqsSys[state.A.sys]}<br><br><b>${form.name} :</b><br>${form.desc}<br>GFF sur graphe (SOR)`;
+}
+
+// ============================================================
+// OVERLAY CINÉMA
+// ============================================================
+const sysNames = {
+  triclinic:'Triclinique', monoclinic:'Monoclinique', orthorhombic:'Orthorhombique',
+  tetragonal:'Quadratique', trigonal:'Trigonal', hexagonal:'Hexagonal', cubic:'Cubique'
+};
+const hayNames = { cube:'Cube', octa:'Octaèdre', trapezo24:'Trapézoèdre',
+  icosa:'Icosaèdre', dodeca:'Dodécaèdre', rhombododeca:'Rhombododécaèdre' };
+
+function titleForTab() {
+  if (state.anim.active) {
+    return { main: 'Formes', sub: 'GFF intrinsèque · morphing', eq: 'L Φ = ξ,  Φ|∂D = 0' };
+  }
+  if (state.tab === 'A') {
+    if (state.sub === 'hay') {
+      return { main: hayNames[state.A.poly] || state.A.poly, sub: 'Haüy · GFF intrinsèque', eq: 'L Φ = ξ,  Φ|∂D = 0' };
+    }
+    const form = FORMS[state.A.sys].find(f => f.id === state.A.form) || FORMS[state.A.sys][0];
+    return { main: form.name, sub: sysNames[state.A.sys] + ' · ' + form.desc, eq: 'L Φ = ξ,  Φ|∂D = 0' };
+  }
+  return { main: 'Surfaces', sub: 'GFF · ' + state.C.surf, eq: 'Δ_g Φ = ξ,  Φ|∂M = 0' };
+}
+
+function figureInfo() {
+  if (state.tab === 'A') {
+    if (state.sub === 'hay') {
+      if (state.anim.active) {
+        const A = state.anim;
+        const fn = hayNames[A.list[A.fromIdx]] || A.list[A.fromIdx];
+        const tn = hayNames[A.list[A.toIdx]] || A.list[A.toIdx];
+        return { fig: fn, transform: A.phase === 'morph' ? `${fn} → ${tn} (${(A.morphT*100).toFixed(0)}%)` : `maintien · ${fn}` };
+      }
+      return { fig: hayNames[state.A.poly] || state.A.poly, transform: 'Haüy' };
+    }
+    if (state.anim.active) {
+      const A = state.anim;
+      return { fig: A.list[A.fromIdx], transform: A.phase === 'morph'
+        ? `${A.list[A.fromIdx]} → ${A.list[A.toIdx]} (${(A.morphT*100).toFixed(0)}%)`
+        : `maintien · ${A.list[A.idx]}` };
+    }
+    const form = FORMS[state.A.sys].find(f => f.id === state.A.form) || FORMS[state.A.sys][0];
+    return { fig: form.name, transform: sysNames[state.A.sys] };
+  }
+  return { fig: state.C.surf, transform: 'surface GFF' };
+}
+
+function updateCinemaText() {
+  const t = titleForTab();
+  const f = figureInfo();
+  document.getElementById('cTitleMain').textContent = t.main;
+  document.getElementById('cTitleSub').textContent = t.sub;
+  document.getElementById('cEq').textContent = t.eq;
+  document.getElementById('cFig').textContent = f.fig;
+  document.getElementById('cTransform').textContent = f.transform;
+}
+
+// ============================================================
+// MODES
+// ============================================================
+function setMode(mode) {
+  state.mode = mode;
+  document.body.classList.toggle('video', mode === 'video');
+  document.body.classList.toggle('record', mode === 'record');
+  setTimeout(() => resize(), 380);
+  document.getElementById('videoBtn').textContent = mode === 'video' ? '✕ Quitter cinéma' : '▶ Mode cinéma';
+  document.getElementById('recordBtn').textContent = mode === 'record' ? '✕ Quitter enregistrement' : '● Mode enregistrement';
+  if (mode === 'video') {
+    videoStart = performance.now();
+    if (!videoRAF) videoRAF = requestAnimationFrame(updateTimer);
+  } else {
+    if (videoRAF) { cancelAnimationFrame(videoRAF); videoRAF = null; }
+    document.getElementById('cinemaTimer').textContent = '00:00';
+  }
+  if (mode === 'client') stopRecording();
+  updateCinemaText();
+}
+document.getElementById('videoBtn').onclick = () => setMode(state.mode === 'video' ? 'client' : 'video');
+document.getElementById('recordBtn').onclick = () => setMode(state.mode === 'record' ? 'client' : 'record');
+document.getElementById('quitRecord').onclick = () => setMode('client');
+
+const cinemaTimerEl = document.getElementById('cinemaTimer');
+let videoStart = 0, videoRAF = null;
+function updateTimer() {
+  if (state.mode !== 'video') return;
+  const t = (performance.now() - videoStart)/1000;
+  const mm = String(Math.floor(t/60)).padStart(2,'0');
+  const ss = String(Math.floor(t%60)).padStart(2,'0');
+  cinemaTimerEl.textContent = `${mm}:${ss}`;
+  videoRAF = requestAnimationFrame(updateTimer);
+}
+
+// ============================================================
+// Enregistrement WebM
+// ============================================================
+let mediaRecorder = null;
+let recordedChunks = [];
+let recStart = 0;
+let recRAF = null;
+const recBtn = document.getElementById('recBtn');
+const recInfo = document.getElementById('recInfo');
+
+function startRecording() {
+  const resSelect = document.getElementById('recRes').value;
+  const fps = parseInt(document.getElementById('recFps').value, 10);
+  const heights = { '720': 720, '1080': 1080, '1440': 1440, '2160': 2160 };
+  const H = heights[resSelect] || 1080;
+  const W = Math.round(H * 16/9);
+
+  const recCanvas = document.createElement('canvas');
+  recCanvas.width = W; recCanvas.height = H;
+  const recCtx = recCanvas.getContext('2d');
+
+  if (captureRenderer) captureRenderer.dispose();
+  captureRenderer = new THREE.WebGLRenderer({ canvas: document.createElement('canvas'), antialias: true, alpha: true, preserveDrawingBuffer: true });
+  captureRenderer.setPixelRatio(1);
+  captureRenderer.setSize(W, H, false);
+  captureRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+  captureRenderer.toneMappingExposure = state.render.exposure;
+  captureRenderer.outputColorSpace = THREE.SRGBColorSpace;
+
+  const captureCamera = camera.clone();
+  captureCamera.aspect = W / H;
+  captureCamera.updateProjectionMatrix();
+
+  const stream = recCanvas.captureStream(fps);
+  recordedChunks = [];
+  const options = { mimeType: 'video/webm;codecs=vp9' };
+  if (!MediaRecorder.isTypeSupported(options.mimeType)) options.mimeType = 'video/webm;codecs=vp8';
+  mediaRecorder = new MediaRecorder(stream, options);
+  mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
+  mediaRecorder.onstop = () => {
+    const blob = new Blob(recordedChunks, { type: 'video/webm' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `gff-${state.tab}-${Date.now()}.webm`;
+    a.click();
+    URL.revokeObjectURL(url);
+    recInfo.textContent = '✓ Vidéo téléchargée';
+    setTimeout(() => recInfo.textContent = '', 3000);
+    if (captureRenderer) { captureRenderer.dispose(); captureRenderer = null; }
+  };
+  mediaRecorder.start();
+
+  function recLoop() {
+    if (!mediaRecorder || mediaRecorder.state !== 'recording') return;
+    captureCamera.position.copy(camera.position);
+    captureCamera.quaternion.copy(camera.quaternion);
+    captureCamera.aspect = W / H;
+    captureCamera.updateProjectionMatrix();
+    captureRenderer.render(scene, captureCamera);
+    recCtx.drawImage(captureRenderer.domElement, 0, 0, W, H);
+    drawOverlay(recCtx, W, H);
+    const t = (performance.now() - recStart)/1000;
+    const mm = String(Math.floor(t/60)).padStart(2,'0');
+    const ss = String(Math.floor(t%60)).padStart(2,'0');
+    recInfo.textContent = `● ${mm}:${ss} · ${W}×${H} · ${fps}fps`;
+    recRAF = requestAnimationFrame(recLoop);
+  }
+  recStart = performance.now();
+  recLoop();
+  recBtn.textContent = '■ Arrêter';
+  recBtn.classList.add('recording');
+}
+
+function drawOverlay(ctx, W, H) {
+  const scale = H / 1080;
+  const g = ctx.createRadialGradient(W*0.3, H*0.2, 0, W*0.3, H*0.2, W*0.9);
+  g.addColorStop(0, '#1a2233'); g.addColorStop(0.4, '#0a0e14'); g.addColorStop(1, '#05070b');
+  ctx.globalCompositeOperation = 'destination-over';
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ctx.globalCompositeOperation = 'source-over';
+
+  const tinfo = titleForTab();
+  const finfo = figureInfo();
+
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.fillStyle = '#e6edf3';
+  ctx.font = `300 ${56*scale}px 'Cormorant Garamond', serif`;
+  ctx.fillText(tinfo.main, W/2, 24*scale);
+  ctx.fillStyle = '#79c0ff';
+  ctx.font = `${13*scale}px 'JetBrains Mono', monospace`;
+  ctx.fillText(tinfo.sub.toUpperCase(), W/2, 100*scale);
+
+  const eqW = 640*scale, eqH = 40*scale, eqY = 150*scale;
+  ctx.fillStyle = 'rgba(5,7,11,.78)';
+  ctx.fillRect(W/2 - eqW/2, eqY, eqW, eqH);
+  ctx.strokeStyle = '#30363d'; ctx.lineWidth = 1;
+  ctx.strokeRect(W/2 - eqW/2, eqY, eqW, eqH);
+  ctx.fillStyle = '#c9d1d9';
+  ctx.font = `${14*scale}px 'JetBrains Mono', monospace`;
+  ctx.textBaseline = 'middle';
+  ctx.fillText(tinfo.eq, W/2, eqY + eqH/2);
+
+  const baseY = H - 100*scale;
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = '#79c0ff';
+  ctx.font = `${13*scale}px 'JetBrains Mono', monospace`;
+  ctx.fillText('FORME', W/2, baseY);
+  ctx.fillStyle = '#e6edf3';
+  ctx.font = `300 ${26*scale}px 'Cormorant Garamond', serif`;
+  ctx.fillText(finfo.fig, W/2, baseY + 20*scale);
+  ctx.fillStyle = '#79c0ff';
+  ctx.font = `${13*scale}px 'JetBrains Mono', monospace`;
+  ctx.fillText('SYSTÈME', W/2, baseY + 60*scale);
+  ctx.fillStyle = '#e6edf3';
+  ctx.font = `300 ${20*scale}px 'Cormorant Garamond', serif`;
+  ctx.fillText(finfo.transform, W/2, baseY + 80*scale);
+
+  const t = (performance.now() - recStart)/1000;
+  const mm = String(Math.floor(t/60)).padStart(2,'0');
+  const ss = String(Math.floor(t%60)).padStart(2,'0');
+  ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+  ctx.fillStyle = 'rgba(5,7,11,.7)';
+  const tw = 70*scale, th = 26*scale, tx = W - 28*scale - tw, ty = 28*scale;
+  ctx.fillRect(tx, ty, tw, th);
+  ctx.strokeStyle = '#21262d'; ctx.strokeRect(tx, ty, tw, th);
+  ctx.fillStyle = '#8b949e';
+  ctx.font = `${14*scale}px 'JetBrains Mono', monospace`;
+  ctx.textBaseline = 'middle';
+  ctx.fillText(`${mm}:${ss}`, W - 28*scale - tw/2, ty + th/2);
+  ctx.textAlign = 'center';
+}
+
+function stopRecording() {
+  if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
+  if (recRAF) { cancelAnimationFrame(recRAF); recRAF = null; }
+  recBtn.textContent = '● Enregistrer';
+  recBtn.classList.remove('recording');
+  recInfo.textContent = '';
+}
+recBtn.onclick = () => {
+  if (mediaRecorder && mediaRecorder.state === 'recording') stopRecording();
+  else startRecording();
+};
+
+// ============================================================
+// CLAVIER
+// ============================================================
+const C_SURFS = ['sphere','torus','mobius','catenoid','helicoid'];
+
+function cycleForm(dir) {
+  if (state.anim.active) stopAnimation();
+  if (state.sub === 'hay') {
+    const list = Object.keys(HAUY);
+    const idx = list.indexOf(state.A.poly);
+    const next = (idx + dir + list.length) % list.length;
+    state.A.poly = list[next];
+    document.getElementById('polyA').value = state.A.poly;
+  } else {
+    const list = (FORMS[state.A.sys] || FORMS.cubic).map(f => f.id);
+    const idx = list.indexOf(state.A.form);
+    const next = (idx + dir + list.length) % list.length;
+    state.A.form = list[next];
+    document.getElementById('formA').value = state.A.form;
+  }
+  rebuildA();
+}
+function cycleC(dir) {
+  const idx = C_SURFS.indexOf(state.C.surf);
+  const next = (idx + dir + C_SURFS.length) % C_SURFS.length;
+  state.C.surf = C_SURFS[next];
+  document.getElementById('surfC').value = state.C.surf;
+  rebuildC();
+}
+function cycleTab(dir) {
+  const tabs = ['A','C'];
+  const idx = tabs.indexOf(state.tab);
+  const next = (idx + dir + tabs.length) % tabs.length;
+  document.querySelectorAll('.tab').forEach(t => { if (t.dataset.tab === next) t.click(); });
+}
+
+window.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  if (e.key === 'ArrowLeft') {
+    if (state.tab === 'A') cycleForm(-1);
+    else cycleC(-1);
+    e.preventDefault();
+  } else if (e.key === 'ArrowRight') {
+    if (state.tab === 'A') cycleForm(1);
+    else cycleC(1);
+    e.preventDefault();
+  } else if (e.key === 'ArrowUp') { cycleTab(-1); e.preventDefault(); }
+  else if (e.key === 'ArrowDown') { cycleTab(1); e.preventDefault(); }
+  else if (e.key === ' ') {
+    state.autoRot = !state.autoRot;
+    controls.autoRotate = state.autoRot;
+    document.getElementById('rot').textContent = (state.autoRot ? '⏸ Pause rotation' : '▶ Rotation');
+    e.preventDefault();
+  }
+});
+
+// ============================================================
+// UI
+// ============================================================
+const $ = id => document.getElementById(id);
+function syncLabels() {
+  $('vResA').textContent = state.A.subdiv;
+  $('vAmpA').textContent = state.A.amp.toFixed(2);
+  $('vHold').textContent = (state.anim.holdMs/1000).toFixed(1);
+  $('vMorph').textContent = (state.anim.morphMs/1000).toFixed(1);
+  $('vResC').textContent = 2**state.C.resExp;
+  $('vAmpC').textContent = state.C.amp.toFixed(2);
+  $('vZ').textContent = state.zoomStep;
+  $('vRot').textContent = state.rotSpeed.toFixed(1);
+  $('vExposure').textContent = state.render.exposure.toFixed(2);
+  $('vRough').textContent = state.render.rough.toFixed(2);
+  $('vMetal').textContent = state.render.metal.toFixed(2);
+  $('vIor').textContent = state.render.ior.toFixed(2);
+  $('vTrans').textContent = state.render.trans.toFixed(2);
+  $('vThick').textContent = state.render.thick.toFixed(1);
+}
+
+document.querySelectorAll('.tab').forEach(t => {
+  t.onclick = () => {
+    if (state.anim.active) stopAnimation();
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.tabpane').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    $('pane' + t.dataset.tab).classList.add('active');
+    state.tab = t.dataset.tab;
+    if (state.tab === 'A') rebuildA();
+    else rebuildC();
+  };
+});
+
+document.querySelectorAll('.subtab').forEach(t => {
+  t.onclick = () => {
+    if (state.anim.active) stopAnimation();
+    document.querySelectorAll('.subtab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.subpane').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    $('sub' + t.dataset.sub.charAt(0).toUpperCase() + t.dataset.sub.slice(1)).classList.add('active');
+    state.sub = t.dataset.sub;
+    if (state.sub === 'sys') updateFormSelect();
+    rebuildA();
+  };
+});
+
+$('polyA').onchange = e => {
+  if (state.anim.active) stopAnimation();
+  state.A.poly = e.target.value;
+  rebuildA();
+};
+$('sysA').onchange = e => {
+  if (state.anim.active) stopAnimation();
+  state.A.sys = e.target.value;
+  const forms = FORMS[state.A.sys] || FORMS.cubic;
+  state.A.form = forms[0].id;
+  updateFormSelect();
+  rebuildA();
+};
+$('formA').onchange = e => {
+  if (state.anim.active) stopAnimation();
+  state.A.form = e.target.value;
+  rebuildA();
+};
+$('animA').onclick = () => {
+  if (state.anim.active) stopAnimation();
+  else startAnimation();
+};
+$('hold').oninput = e => { state.anim.holdMs = +e.target.value*1000; syncLabels(); };
+$('morph').oninput = e => { state.anim.morphMs = +e.target.value*1000; syncLabels(); };
+$('rotSpeed').oninput = e => { state.rotSpeed = +e.target.value; controls.autoRotateSpeed = state.rotSpeed; syncLabels(); };
+$('resA').oninput = e => { state.A.subdiv = +e.target.value; syncLabels(); if (!state.anim.active) rebuildA(); };
+$('ampA').oninput = e => { state.A.amp = +e.target.value; syncLabels(); if (!state.anim.active) rebuildA(); };
+$('resampleA').onclick = () => { state.A._gff = null; rebuildA(); };
+$('surfC').onchange = e => { state.C.surf = e.target.value; rebuildC(); };
+$('resC').oninput = e => { state.C.resExp = +e.target.value; state.C._gff = null; syncLabels(); rebuildC(); };
+$('ampC').oninput = e => { state.C.amp = +e.target.value; syncLabels(); rebuildC(); };
+$('resampleC').onclick = () => { state.C._gff = null; rebuildC(); };
+$('material').onchange = e => {
+  state.material = e.target.value;
+  if (mesh) {
+    const mat = makeMaterial();
+    mat.vertexColors = (state.material === 'matte');
+    mesh.material.dispose();
+    mesh.material = mat;
+  }
+};
+$('palette').onchange = e => {
+  state.palette = e.target.value;
+  if (state.tab === 'A') rebuildA();
+  else rebuildC();
+};
+$('env').onchange = e => { state.env = e.target.value; updateEnv(); };
+$('Z').oninput = e => { state.zoomStep = +e.target.value; syncLabels(); applyZoomStep(); };
+$('exposure').oninput = e => { state.render.exposure = +e.target.value; renderer.toneMappingExposure = state.render.exposure; syncLabels(); };
+$('rough').oninput = e => { state.render.rough = +e.target.value; syncLabels(); if (mesh && mesh.material.roughness !== undefined) mesh.material.roughness = state.render.rough; };
+$('metal').oninput = e => { state.render.metal = +e.target.value; syncLabels(); if (mesh && mesh.material.metalness !== undefined) mesh.material.metalness = state.render.metal; };
+$('ior').oninput = e => { state.render.ior = +e.target.value; syncLabels(); if (mesh && mesh.material.ior !== undefined) mesh.material.ior = state.render.ior; };
+$('trans').oninput = e => { state.render.trans = +e.target.value; syncLabels(); if (mesh && mesh.material.transmission !== undefined) mesh.material.transmission = state.render.trans; };
+$('thick').oninput = e => { state.render.thick = +e.target.value; syncLabels(); if (mesh && mesh.material.thickness !== undefined) mesh.material.thickness = state.render.thick; };
+$('rot').onclick = () => {
+  state.autoRot = !state.autoRot;
+  controls.autoRotate = state.autoRot;
+  $('rot').textContent = (state.autoRot ? '⏸ Pause rotation' : '▶ Rotation');
+};
+$('resetCam').onclick = () => {
+  camera.position.set(8, 6, 10);
+  if (mesh) {
+    mesh.geometry.computeBoundingBox();
+    const box = mesh.geometry.boundingBox;
+    if (box && !box.isEmpty()) {
+      const c = box.getCenter(new THREE.Vector3());
+      const sz = box.getSize(new THREE.Vector3()).length();
+      controls.target.copy(c);
+      state.baseDist = Math.max(2.5, sz*1.5);
+      state.zoomStep = 6;
+      document.getElementById('Z').value = 6;
+      document.getElementById('vZ').textContent = 6;
+      applyZoomStep();
+    }
+  }
+};
+
+function resize() {
+  const r = view.getBoundingClientRect();
+  if (r.width === 0 || r.height === 0) return;
+  renderer.setSize(r.width, r.height, false);
+  camera.aspect = r.width / r.height;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+new ResizeObserver(() => resize()).observe(view);
+
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+updateFormSelect();
+syncLabels();
+rebuildA();
+resize();
+animate();
+</script>
+</body>
+</html>
